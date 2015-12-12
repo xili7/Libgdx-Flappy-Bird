@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Interpolation;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Action;
 import com.badlogic.gdx.scenes.scene2d.Group;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
@@ -18,6 +19,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Array;
+
+import java.util.Random;
 
 import sun.applet.Main;
 
@@ -34,11 +37,14 @@ public class GameScreen implements Screen {
     private Texture getReadyTexture;
     private Texture tapTexture;
     private Texture birdTexture;
+    private Texture pipeHeadTexture1;
+    private Texture pipeHeadTexture2;
+    private Texture pipeBodyTexture;
 
     private Group groundGroup;
     private Group notPlaying;
-    private Group pipeGroup;
 
+    private boolean notReady;
     private Animation birdAnimation;
     private Image birdActor;
     private float timer;
@@ -47,11 +53,19 @@ public class GameScreen implements Screen {
     private float idleTime;
     private boolean birdInAction = false;
 
+    private final float pipeSpaceWidth = 4 * WORLD_WIDTH / 6;
+    private final float pipeSpaceHeight = WORLD_HEIGHT / 3;
+    private Vector2 pipes[];
+    private Random random;
+    private float pipeTimer;
+
     private class BirdListener extends ClickListener {
         @Override
         public void clicked(InputEvent event, float x, float y) {
+            super.clicked(event, x, y);
             System.out.println("CLicked");
             notPlaying.setVisible(false);
+            notReady = false;
             birdActor.clearActions();
             birdActor.setRotation(0);
             birdInAction = true;
@@ -70,19 +84,19 @@ public class GameScreen implements Screen {
 
     @Override
     public void show() {
+        notReady = true;
         MainGameViewport viewport = new MainGameViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         stage = new Stage(viewport);
+        stage.getRoot().setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
         stage.getRoot().getColor().a = 0;
         stage.getRoot().addAction(Actions.fadeIn(0.5f));
         stage.addListener(new BirdListener());
+
         skyTexture = new Texture("png/stage_sky.png");
-        Image sky = new Image(skyTexture);
-        sky.setBounds(0, 0.15f * WORLD_HEIGHT, WORLD_WIDTH, 0.85f * WORLD_HEIGHT);
-        stage.addActor(sky);
 
         groundTexture = new Texture("png/stage_ground.png");
         groundGroup = new Group();
-        for (int i = 0; i < 21; i++) {
+        for (int i = 0; i < 25; i++) {
             Image image = new Image(groundTexture);
             image.setBounds(i * WORLD_WIDTH / 20f, 0, WORLD_WIDTH / 20f, 0.15f * WORLD_HEIGHT);
             groundGroup.addActor(image);
@@ -111,8 +125,20 @@ public class GameScreen implements Screen {
         birdActor.setBounds(0.25f * WORLD_WIDTH, 0.5f * WORLD_HEIGHT, 0.15f * WORLD_WIDTH, WORLD_HEIGHT / 17f);
         birdActor.setOrigin(birdActor.getWidth() / 2, birdActor.getHeight() / 2);
         birdVelocity = 0;
+        birdInAction = true;
         initialY = birdActor.getY();
         stage.addActor(birdActor);
+
+        pipeHeadTexture1 = new Texture("png/pipe_head_1.png");
+        pipeHeadTexture2 = new Texture("png/pipe_head_2.png");
+        pipeBodyTexture = new Texture("png/pipe_body.png");
+
+        pipes = new Vector2[4];
+        pipes[0] = new Vector2(2f * WORLD_WIDTH, 0.5f * WORLD_HEIGHT);
+        random = new Random();
+        for (int i = 1; i < 4; i++) {
+            pipes[i] = new Vector2(pipes[i - 1].x + pipeSpaceWidth, (random.nextFloat() * 0.4f + 0.2f) * WORLD_HEIGHT);
+        }
 
         Gdx.input.setInputProcessor(stage);
     }
@@ -123,13 +149,28 @@ public class GameScreen implements Screen {
         Gdx.gl.glClearColor(1, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
+        if (!notReady) {
+            pipeTimer += Gdx.graphics.getDeltaTime();
+            while (0.005 < pipeTimer) {
+                pipeTimer -= 0.005;
+                for (int i = 0; i < 4; i++) {
+                    pipes[i].x -= 0.0025 * WORLD_WIDTH;
+
+                    if (pipes[i].x < -WORLD_WIDTH / 6f) {
+                        pipes[i].x = pipes[((i - 1) + 4) % 4].x + pipeSpaceWidth;
+                        pipes[i].y = (random.nextFloat() * 0.4f + 0.2f) * WORLD_HEIGHT;
+                    }
+                }
+            }
+        }
+
         timer += Gdx.graphics.getDeltaTime();
         idleTime += Gdx.graphics.getDeltaTime();
         birdActor.setDrawable(new TextureRegionDrawable(birdAnimation.getKeyFrame(timer)));
 
         if (0 == groundGroup.getActions().size) {
             groundGroup.setX(0);
-            groundGroup.addAction(Actions.moveBy(-WORLD_WIDTH / 20f, 0, 1f / 6));
+            groundGroup.addAction(Actions.moveBy(-WORLD_WIDTH / 20f, 0, 1f / 25));
         }
 
         if (!birdInAction) {
@@ -138,8 +179,26 @@ public class GameScreen implements Screen {
             birdActor.setY(newY);
         }
 
+        if (birdActor.getY() >= WORLD_HEIGHT - birdActor.getHeight()) {
+            birdActor.setY(WORLD_HEIGHT - birdActor.getHeight());
+        }
+
+        if (0.15f * WORLD_HEIGHT > birdActor.getY()) {
+            birdActor.setY(0.15f * WORLD_HEIGHT);
+        }
+
         stage.act(delta);
         stage.getViewport().apply();
+        stage.getBatch().begin();
+        stage.getBatch().draw(skyTexture, 0, 0.15f * WORLD_HEIGHT, WORLD_WIDTH, 0.85f * WORLD_HEIGHT);
+        for (Vector2 pipe : pipes) {
+            stage.getBatch().draw(pipeHeadTexture2, pipe.x, pipe.y, WORLD_WIDTH / 6f, WORLD_HEIGHT / 30f);
+            stage.getBatch().draw(pipeBodyTexture, pipe.x + (WORLD_WIDTH / 200f), 0.15f * WORLD_HEIGHT, (WORLD_WIDTH / 6f) - (WORLD_WIDTH / 100f), pipe.y - 0.15f * WORLD_HEIGHT);
+            stage.getBatch().draw(pipeBodyTexture, pipe.x + (WORLD_WIDTH / 200f), pipe.y + pipeSpaceHeight + (WORLD_WIDTH / 30f), (WORLD_WIDTH / 6f) - (WORLD_WIDTH / 100f), WORLD_HEIGHT / 2f);
+            stage.getBatch().draw(pipeHeadTexture1, pipe.x, pipe.y + pipeSpaceHeight, WORLD_WIDTH / 6f, WORLD_HEIGHT / 30f);
+
+        }
+        stage.getBatch().end();
         stage.draw();
     }
 
@@ -167,6 +226,10 @@ public class GameScreen implements Screen {
     @Override
     public void dispose() {
         skyTexture.dispose();
+        groundTexture.dispose();
+        getReadyTexture.dispose();
+        tapTexture.dispose();
+        birdTexture.dispose();
     }
 
 }
