@@ -83,6 +83,9 @@ public class GameScreen implements Screen {
             System.out.println("CLicked");
             notPlaying.setVisible(false);
             notReady = false;
+            if(gameOver) {
+                return;
+            }
             birdActor.clearActions();
             birdActor.setRotation(0);
             birdInAction = true;
@@ -239,25 +242,29 @@ public class GameScreen implements Screen {
             @Override
             public void run() {
                 gameOverGroup.setVisible(true);
+                gameOverGroup.getColor().a = 0;
+                gameOverGroup.addAction(Actions.fadeIn(0.5f));
             }
         }));
 
         if (0.15f * WORLD_HEIGHT > birdActor.getY()) {
+            gameOver = true;
             stage.removeListener(birdListener);
             birdActor.clearActions();
-            gameOver = true;
             stage.addAction(afterShakeAction);
             birdActor.addAction(birdFallAction);
+            return;
         }
 
         for (Vector2 pipe : pipes) {
             if (birdActor.getX() + birdActor.getWidth() >= pipe.x && birdActor.getX() < pipe.x + WORLD_WIDTH / 6f) {
                 if (birdActor.getY() < pipe.y || birdActor.getY() + birdActor.getHeight() > pipe.y + pipeSpaceHeight) {
+                    gameOver = true;
                     stage.removeListener(birdListener);
                     birdActor.clearActions();
-                    gameOver = true;
                     stage.addAction(afterShakeAction);
                     birdActor.addAction(birdFallAction);
+                    break;
                 }
             }
         }
