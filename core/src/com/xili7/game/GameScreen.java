@@ -258,7 +258,7 @@ public class GameScreen implements Screen {
 
         for (Vector2 pipe : pipes) {
             if (birdActor.getX() + birdActor.getWidth() >= pipe.x && birdActor.getX() < pipe.x + WORLD_WIDTH / 6f) {
-                if (birdActor.getY() < pipe.y || birdActor.getY() + birdActor.getHeight() > pipe.y + pipeSpaceHeight) {
+                if (birdActor.getY() < (pipe.y + WORLD_HEIGHT / 30f) || birdActor.getY() + birdActor.getHeight() > pipe.y + pipeSpaceHeight) {
                     gameOver = true;
                     stage.removeListener(birdListener);
                     birdActor.clearActions();

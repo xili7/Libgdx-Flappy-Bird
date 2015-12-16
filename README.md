@@ -8,7 +8,11 @@ I just learned Libgdx last quarter from our group project in ECS 160: Software E
 The images I used for the game were from
 https://github.com/ben7th/flappy-html5-bird/tree/gh-pages/ui/images.
 
-Conclusion: I finished the game in 1 day! Proud of myself!!
+Conclusion: I finished the game in 1 day! Proud of myself!
 
 To play the game, download the project and open it with Android Studio. 
-Then, run the built apk in an emulator or a real android device.
+Then, build the project and run the built apk in an emulator or a real android device.
+
+It's also possible to play the game in desktop by:
+Right clicking DesktopLauncher in Android Studio, and then click "Run 'DesktopLauncher ... main()' "
+If the game doesn't open, set the working directory of the application to android\assets and to run the game again.
